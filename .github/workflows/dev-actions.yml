@@ -34,5 +34,5 @@ jobs:
       run: |
         az deployment group create \
           --resource-group ${{ secrets.AZURE_RESOURCE_GROUP }} \
-          --template-file main.bicep \
+          --template-file ./iac/main.bicep  \
           --parameters dbAdminPassword=${{ secrets.DB_ADMIN_PASSWORD }}
