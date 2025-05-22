@@ -2,6 +2,7 @@ param location string = resourceGroup().location
 param appName string = 'my-linux-app-${uniqueString(resourceGroup().id)}'
 param dbName string = 'mydb${uniqueString(resourceGroup().id)}'
 param redisName string = 'redis${uniqueString(resourceGroup().id)}'
+param linuxFxVersion string = 'node|20-lts' 
 param cdnProfileName string = 'cdnProfile${uniqueString(resourceGroup().id)}'
 param cdnEndpointName string = 'cdnEndpoint${uniqueString(resourceGroup().id)}'
 
@@ -12,28 +13,23 @@ param dbAdminPassword string
 resource appServicePlan 'Microsoft.Web/serverfarms@2022-03-01' = {
   name: '${appName}-plan'
   location: location
-  sku: {
-    name: 'P1v2'
-    tier: 'PremiumV2'
-    size: 'P1v2'
-    capacity: 1
-  }
-  kind: 'linux'
   properties: {
     reserved: true
   }
+  sku: {
+    name: 'F1'
+  }
+  kind: 'linux'
 }
 
 // Web App (Linux)
 resource webApp 'Microsoft.Web/sites@2022-03-01' = {
   name: appName
   location: location
-  kind: 'app,linux'
   properties: {
     serverFarmId: appServicePlan.id
     siteConfig: {
-      linuxFxVersion: 'NODE|18-lts'
-      alwaysOn: true
+      linuxFxVersion: linuxFxVersion
     }
   }
 }
