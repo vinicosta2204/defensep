@@ -8,7 +8,7 @@ param cdnEndpointName string = 'cdnEndpoint${uniqueString(resourceGroup().id)}'
 @secure()
 param dbAdminPassword string
 
-// Resource: App Service Plan (Linux)
+// App Service Plan (Linux)
 resource appServicePlan 'Microsoft.Web/serverfarms@2022-03-01' = {
   name: '${appName}-plan'
   location: location
@@ -24,7 +24,7 @@ resource appServicePlan 'Microsoft.Web/serverfarms@2022-03-01' = {
   }
 }
 
-// Resource: App Service (Linux)
+// Web App (Linux)
 resource webApp 'Microsoft.Web/sites@2022-03-01' = {
   name: appName
   location: location
@@ -32,13 +32,13 @@ resource webApp 'Microsoft.Web/sites@2022-03-01' = {
   properties: {
     serverFarmId: appServicePlan.id
     siteConfig: {
-      linuxFxVersion: 'NODE|18-lts' // or 'DOTNETCORE|6.0' etc
+      linuxFxVersion: 'NODE|18-lts'
       alwaysOn: true
     }
   }
 }
 
-// Resource: Azure Database for PostgreSQL (Flexible Server)
+// PostgreSQL Flexible Server
 resource dbServer 'Microsoft.DBforPostgreSQL/flexibleServers@2022-01-20-preview' = {
   name: dbName
   location: location
@@ -65,7 +65,7 @@ resource dbServer 'Microsoft.DBforPostgreSQL/flexibleServers@2022-01-20-preview'
   }
 }
 
-// Resource: Azure Cache for Redis
+// Redis Cache
 resource redis 'Microsoft.Cache/Redis@2023-08-01' = {
   name: redisName
   location: location
@@ -79,7 +79,7 @@ resource redis 'Microsoft.Cache/Redis@2023-08-01' = {
   }
 }
 
-// Resource: CDN Profile
+// CDN Profile
 resource cdnProfile 'Microsoft.Cdn/profiles@2023-05-01' = {
   name: cdnProfileName
   location: 'global'
@@ -88,7 +88,7 @@ resource cdnProfile 'Microsoft.Cdn/profiles@2023-05-01' = {
   }
 }
 
-// Resource: CDN Endpoint pointing to App Service
+// CDN Endpoint
 resource cdnEndpoint 'Microsoft.Cdn/profiles/endpoints@2023-05-01' = {
   name: '${cdnProfile.name}/${cdnEndpointName}'
   location: 'global'
@@ -96,36 +96,32 @@ resource cdnEndpoint 'Microsoft.Cdn/profiles/endpoints@2023-05-01' = {
     origins: [
       {
         name: 'appOrigin'
-        hostName: '${webApp.properties.defaultHostName}'
-        httpsPort: 443
+        properties: {
+          hostName: webApp.properties.defaultHostName
+        }
       }
     ]
     isHttpAllowed: false
     isHttpsAllowed: true
   }
   dependsOn: [
+    cdnProfile
     webApp
   ]
 }
 
-// Restrict access to App Service so only CDN can access it
-resource accessRestriction 'Microsoft.Web/sites/config@2022-03-01' = {
+// App Service access restriction to only allow CDN
+resource accessRestrictions 'Microsoft.Web/sites/config@2022-03-01' = {
   name: '${webApp.name}/web'
   properties: {
+    ipSecurityRestrictionsDefaultAction: 'Deny'
     ipSecurityRestrictions: [
       {
-        ipAddress: '0.0.0.0/0'
-        action: 'Deny'
-        priority: 100
-        name: 'DenyAll'
-        tag: 'Default'
-      }
-      {
-        ipAddress: 'AzureFrontDoor.Backend'
-        action: 'Allow'
-        priority: 90
         name: 'AllowCDN'
+        action: 'Allow'
+        priority: 100
         tag: 'ServiceTag'
+        ipAddress: 'AzureFrontDoor.Backend'
       }
     ]
   }
