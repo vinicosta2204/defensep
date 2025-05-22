@@ -3,7 +3,7 @@ name: bicep
 on:
   push:
     branches:
-      - '!main'
+      - 'main'
     tags:
       - development
 
