@@ -84,7 +84,7 @@ resource cdnProfile 'Microsoft.Cdn/profiles@2023-05-01' = {
   name: cdnProfileName
   location: 'global'
   sku: {
-    name: 'Standard_Microsoft'
+    name: 'Standard_Verizon'
   }
 }
 
