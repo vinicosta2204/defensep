@@ -5,7 +5,7 @@ on:
     branches:
       - 'main'
     tags:
-      - development
+      - dev
 
 env:
   ENVIRONMENT: 'dev'
@@ -17,7 +17,7 @@ permissions:
 jobs: 
   provision-infra:
     runs-on: ubuntu-latest
-    environment: development
+    environment: dev
 
     steps:
     - name: 'Checkout'
