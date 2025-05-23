@@ -8,20 +8,23 @@ param cdnEndpointName string = 'cdnEndpoint${uniqueString(resourceGroup().id)}'
 @secure()
 param dbAdminPassword string
 
-// App Service Plan (Linux)
+// Resource: App Service Plan (Linux)
 resource appServicePlan 'Microsoft.Web/serverfarms@2022-03-01' = {
   name: '${appName}-plan'
   location: location
+  sku: {
+    name: 'P1v2'
+    tier: 'PremiumV2'
+    size: 'P1v2'
+    capacity: 1
+  }
+  kind: 'linux'
   properties: {
     reserved: true
   }
-  sku: {
-    name: 'F1'
-  }
-  kind: 'linux'
 }
 
-// Web App (Linux)
+// Resource: App Service (Linux)
 resource webApp 'Microsoft.Web/sites@2022-03-01' = {
   name: appName
   location: location
@@ -29,13 +32,13 @@ resource webApp 'Microsoft.Web/sites@2022-03-01' = {
   properties: {
     serverFarmId: appServicePlan.id
     siteConfig: {
-      linuxFxVersion: 'NODE|18-lts'
+      linuxFxVersion: 'NODE|18-lts' // or 'DOTNETCORE|6.0' etc
       alwaysOn: true
     }
   }
 }
 
-// PostgreSQL Flexible Server
+// Resource: Azure Database for PostgreSQL (Flexible Server)
 resource dbServer 'Microsoft.DBforPostgreSQL/flexibleServers@2022-01-20-preview' = {
   name: dbName
   location: location
@@ -62,67 +65,71 @@ resource dbServer 'Microsoft.DBforPostgreSQL/flexibleServers@2022-01-20-preview'
   }
 }
 
-// Redis Cache
+// Resource: Azure Cache for Redis
 resource redis 'Microsoft.Cache/Redis@2023-08-01' = {
   name: redisName
   location: location
   properties: {
+    enableNonSslPort: false
     sku: {
       name: 'Basic'
       family: 'C'
       capacity: 0
     }
-    enableNonSslPort: false
   }
 }
 
-// // CDN Profile
-// resource cdnProfile 'Microsoft.Cdn/profiles@2023-05-01' = {
-//   name: cdnProfileName
-//   location: 'global'
-//   sku: {
-//     name: 'Standard_Microsoft'
-//   }
-// }
+// Resource: CDN Profile
+resource cdnProfile 'Microsoft.Cdn/profiles@2023-05-01' = {
+  name: cdnProfileName
+  location: 'global'
+  sku: {
+    name: 'Standard_Microsoft'
+  }
+}
 
-// // CDN Endpoint
-// resource cdnEndpoint 'Microsoft.Cdn/profiles/endpoints@2023-05-01' = {
-//   name: '${cdnProfile.name}/${cdnEndpointName}'
-//   location: 'global'
-//   properties: {
-//     origins: [
-//       {
-//         name: 'appOrigin'
-//         properties: {
-//           hostName: webApp.properties.defaultHostName
-//         }
-//       }
-//     ]
-//     isHttpAllowed: false
-//     isHttpsAllowed: true
-//   }
-//   dependsOn: [
-//     cdnProfile
-//     webApp
-//   ]
-// }
+// Resource: CDN Endpoint pointing to App Service
+resource cdnEndpoint 'Microsoft.Cdn/profiles/endpoints@2023-05-01' = {
+  name: '${cdnProfile.name}/${cdnEndpointName}'
+  location: 'global'
+  properties: {
+    origins: [
+      {
+        name: 'appOrigin'
+        hostName: '${webApp.properties.defaultHostName}'
+        httpsPort: 443
+      }
+    ]
+    isHttpAllowed: false
+    isHttpsAllowed: true
+  }
+  dependsOn: [
+    webApp
+  ]
+}
 
-// // App Service access restriction to only allow CDN
-// resource accessRestrictions 'Microsoft.Web/sites/config@2022-03-01' = {
-//   name: '${webApp.name}/web'
-//   properties: {
-//     ipSecurityRestrictionsDefaultAction: 'Deny'
-//     ipSecurityRestrictions: [
-//       {
-//         name: 'AllowCDN'
-//         action: 'Allow'
-//         priority: 100
-//         tag: 'ServiceTag'
-//         ipAddress: 'AzureFrontDoor.Backend'
-//       }
-//     ]
-//   }
-//   dependsOn: [
-//     webApp
-//   ]
-// }
+// Restrict access to App Service so only CDN can access it
+resource accessRestriction 'Microsoft.Web/sites/config@2022-03-01' = {
+  name: '${webApp.name}/web'
+  properties: {
+    ipSecurityRestrictions: [
+      {
+        ipAddress: '0.0.0.0/0'
+        action: 'Deny'
+        priority: 100
+        name: 'DenyAll'
+        tag: 'Default'
+      }
+      {
+        ipAddress: 'AzureFrontDoor.Backend'
+        action: 'Allow'
+        priority: 90
+        name: 'AllowCDN'
+        tag: 'ServiceTag'
+      }
+    ]
+  }
+  dependsOn: [
+    webApp
+  ]
+}
