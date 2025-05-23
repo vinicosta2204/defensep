@@ -114,23 +114,7 @@ resource cdnEndpoint 'Microsoft.Cdn/profiles/endpoints@2023-05-01' = {
 resource accessRestriction 'Microsoft.Web/sites/config@2022-03-01' = {
   name: '${webApp.name}/web'
   properties: {
-    ipSecurityRestrictionsDefaultAction: 'Deny'
-    ipSecurityRestrictions: [
-      {
-        ipAddress: '0.0.0.0/0'
-        action: 'Deny'
-        priority: 100
-        name: 'DenyAll'
-        tag: 'Default'
-      }
-      {
-        ipAddress: 'AzureCdn'
-        action: 'Allow'
-        priority: 90
-        name: 'AllowCDN'
-        tag: 'ServiceTag'
-      }
-    ]
+    ipSecurityRestrictionsDefaultAction: 'Allow'
   }
   dependsOn: [
     webApp
