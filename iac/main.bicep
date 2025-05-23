@@ -35,6 +35,7 @@ resource webApp 'Microsoft.Web/sites@2022-03-01' = {
       linuxFxVersion: 'NODE|18-lts'
       alwaysOn: true
     }
+    publicNetworkAccess	: 'Enabled'
   }
 }
 
