@@ -2,7 +2,6 @@ param location string = resourceGroup().location
 param appName string = 'my-linux-app-${uniqueString(resourceGroup().id)}'
 param dbName string = 'mydb${uniqueString(resourceGroup().id)}'
 param redisName string = 'redis${uniqueString(resourceGroup().id)}'
-param linuxFxVersion string = 'node|20-lts' 
 param cdnProfileName string = 'cdnProfile${uniqueString(resourceGroup().id)}'
 param cdnEndpointName string = 'cdnEndpoint${uniqueString(resourceGroup().id)}'
 
@@ -26,10 +25,12 @@ resource appServicePlan 'Microsoft.Web/serverfarms@2022-03-01' = {
 resource webApp 'Microsoft.Web/sites@2022-03-01' = {
   name: appName
   location: location
+  kind: 'app,linux'
   properties: {
     serverFarmId: appServicePlan.id
     siteConfig: {
-      linuxFxVersion: linuxFxVersion
+      linuxFxVersion: 'NODE|18-lts'
+      alwaysOn: true
     }
   }
 }
@@ -84,44 +85,44 @@ resource cdnProfile 'Microsoft.Cdn/profiles@2023-05-01' = {
   }
 }
 
-// CDN Endpoint
-resource cdnEndpoint 'Microsoft.Cdn/profiles/endpoints@2023-05-01' = {
-  name: '${cdnProfile.name}/${cdnEndpointName}'
-  location: 'global'
-  properties: {
-    origins: [
-      {
-        name: 'appOrigin'
-        properties: {
-          hostName: webApp.properties.defaultHostName
-        }
-      }
-    ]
-    isHttpAllowed: false
-    isHttpsAllowed: true
-  }
-  dependsOn: [
-    cdnProfile
-    webApp
-  ]
-}
+// // CDN Endpoint
+// resource cdnEndpoint 'Microsoft.Cdn/profiles/endpoints@2023-05-01' = {
+//   name: '${cdnProfile.name}/${cdnEndpointName}'
+//   location: 'global'
+//   properties: {
+//     origins: [
+//       {
+//         name: 'appOrigin'
+//         properties: {
+//           hostName: webApp.properties.defaultHostName
+//         }
+//       }
+//     ]
+//     isHttpAllowed: false
+//     isHttpsAllowed: true
+//   }
+//   dependsOn: [
+//     cdnProfile
+//     webApp
+//   ]
+// }
 
-// App Service access restriction to only allow CDN
-resource accessRestrictions 'Microsoft.Web/sites/config@2022-03-01' = {
-  name: '${webApp.name}/web'
-  properties: {
-    ipSecurityRestrictionsDefaultAction: 'Deny'
-    ipSecurityRestrictions: [
-      {
-        name: 'AllowCDN'
-        action: 'Allow'
-        priority: 100
-        tag: 'ServiceTag'
-        ipAddress: 'AzureFrontDoor.Backend'
-      }
-    ]
-  }
-  dependsOn: [
-    webApp
-  ]
-}
+// // App Service access restriction to only allow CDN
+// resource accessRestrictions 'Microsoft.Web/sites/config@2022-03-01' = {
+//   name: '${webApp.name}/web'
+//   properties: {
+//     ipSecurityRestrictionsDefaultAction: 'Deny'
+//     ipSecurityRestrictions: [
+//       {
+//         name: 'AllowCDN'
+//         action: 'Allow'
+//         priority: 100
+//         tag: 'ServiceTag'
+//         ipAddress: 'AzureFrontDoor.Backend'
+//       }
+//     ]
+//   }
+//   dependsOn: [
+//     webApp
+//   ]
+// }
