@@ -4,11 +4,12 @@ param dbName string = 'mydb${uniqueString(resourceGroup().id)}'
 param redisName string = 'redis${uniqueString(resourceGroup().id)}'
 param cdnProfileName string = 'cdnProfile${uniqueString(resourceGroup().id)}'
 param cdnEndpointName string = 'cdnEndpoint${uniqueString(resourceGroup().id)}'
+param storageName string = 'staticweb${uniqueString(resourceGroup().id)}'
 
 @secure()
 param dbAdminPassword string
 
-// Resource: App Service Plan (Linux)
+// App Service Plan (Linux)
 resource appServicePlan 'Microsoft.Web/serverfarms@2022-03-01' = {
   name: '${appName}-plan'
   location: location
@@ -24,7 +25,7 @@ resource appServicePlan 'Microsoft.Web/serverfarms@2022-03-01' = {
   }
 }
 
-// Resource: App Service (Linux)
+// App Service (Linux)
 resource webApp 'Microsoft.Web/sites@2022-03-01' = {
   name: appName
   location: location
@@ -35,11 +36,11 @@ resource webApp 'Microsoft.Web/sites@2022-03-01' = {
       linuxFxVersion: 'NODE|18-lts'
       alwaysOn: true
     }
-    publicNetworkAccess	: 'Enabled'
+    publicNetworkAccess: 'Enabled'
   }
 }
 
-// Resource: Azure Database for PostgreSQL (Flexible Server)
+// PostgreSQL Flexible Server
 resource dbServer 'Microsoft.DBforPostgreSQL/flexibleServers@2022-01-20-preview' = {
   name: dbName
   location: location
@@ -66,7 +67,7 @@ resource dbServer 'Microsoft.DBforPostgreSQL/flexibleServers@2022-01-20-preview'
   }
 }
 
-// Resource: Azure Cache for Redis
+// Azure Cache for Redis
 resource redis 'Microsoft.Cache/Redis@2023-08-01' = {
   name: redisName
   location: location
@@ -80,7 +81,24 @@ resource redis 'Microsoft.Cache/Redis@2023-08-01' = {
   }
 }
 
-// Resource: CDN Profile
+// Static Website Storage Account
+resource staticSiteStorage 'Microsoft.Storage/storageAccounts@2023-01-01' = {
+  name: storageName
+  location: location
+  kind: 'StorageV2'
+  sku: {
+    name: 'Standard_LRS'
+  }
+  properties: {
+    staticWebsite: {
+      enabled: true
+      indexDocument: 'index.html'
+      error404Document: '404.html'
+    }
+  }
+}
+
+// CDN Profile
 resource cdnProfile 'Microsoft.Cdn/profiles@2023-05-01' = {
   name: cdnProfileName
   location: 'global'
@@ -89,16 +107,16 @@ resource cdnProfile 'Microsoft.Cdn/profiles@2023-05-01' = {
   }
 }
 
-// Resource: CDN Endpoint pointing to App Service
+// CDN Endpoint pointing to static website
 resource cdnEndpoint 'Microsoft.Cdn/profiles/endpoints@2023-05-01' = {
   name: '${cdnProfile.name}/${cdnEndpointName}'
   location: 'global'
   properties: {
     origins: [
       {
-        name: 'appOrigin'
+        name: 'staticWebOrigin'
         properties: {
-          hostName: webApp.properties.defaultHostName
+          hostName: '${staticSiteStorage.name}.z13.web.core.windows.net'
         }
       }
     ]
@@ -107,11 +125,11 @@ resource cdnEndpoint 'Microsoft.Cdn/profiles/endpoints@2023-05-01' = {
   }
   dependsOn: [
     cdnProfile
-    webApp
+    staticSiteStorage
   ]
 }
 
-// Restrict access to App Service so only CDN can access it
+// App Service Access - open
 resource accessRestriction 'Microsoft.Web/sites/config@2022-03-01' = {
   name: '${webApp.name}/web'
   properties: {
