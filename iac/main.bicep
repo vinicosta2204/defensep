@@ -96,14 +96,16 @@ resource cdnEndpoint 'Microsoft.Cdn/profiles/endpoints@2023-05-01' = {
     origins: [
       {
         name: 'appOrigin'
-        hostName: '${webApp.properties.defaultHostName}'
-        httpsPort: 443
+        properties: {
+          hostName: webApp.properties.defaultHostName
+        }
       }
     ]
     isHttpAllowed: false
     isHttpsAllowed: true
   }
   dependsOn: [
+    cdnProfile
     webApp
   ]
 }
