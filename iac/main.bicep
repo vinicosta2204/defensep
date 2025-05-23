@@ -32,7 +32,7 @@ resource webApp 'Microsoft.Web/sites@2022-03-01' = {
   properties: {
     serverFarmId: appServicePlan.id
     siteConfig: {
-      linuxFxVersion: 'NODE|18-lts' // or 'DOTNETCORE|6.0' etc
+      linuxFxVersion: 'NODE|18-lts'
       alwaysOn: true
     }
   }
@@ -114,6 +114,7 @@ resource cdnEndpoint 'Microsoft.Cdn/profiles/endpoints@2023-05-01' = {
 resource accessRestriction 'Microsoft.Web/sites/config@2022-03-01' = {
   name: '${webApp.name}/web'
   properties: {
+    ipSecurityRestrictionsDefaultAction: 'Deny'
     ipSecurityRestrictions: [
       {
         ipAddress: '0.0.0.0/0'
@@ -123,7 +124,7 @@ resource accessRestriction 'Microsoft.Web/sites/config@2022-03-01' = {
         tag: 'Default'
       }
       {
-        ipAddress: 'AzureFrontDoor.Backend'
+        ipAddress: 'AzureCdn'
         action: 'Allow'
         priority: 90
         name: 'AllowCDN'
