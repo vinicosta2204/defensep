@@ -76,14 +76,14 @@ resource redis 'Microsoft.Cache/Redis@2023-08-01' = {
   }
 }
 
-// CDN Profile
-resource cdnProfile 'Microsoft.Cdn/profiles@2023-05-01' = {
-  name: cdnProfileName
-  location: 'global'
-  sku: {
-    name: 'Standard_Microsoft'
-  }
-}
+// // CDN Profile
+// resource cdnProfile 'Microsoft.Cdn/profiles@2023-05-01' = {
+//   name: cdnProfileName
+//   location: 'global'
+//   sku: {
+//     name: 'Standard_Microsoft'
+//   }
+// }
 
 // // CDN Endpoint
 // resource cdnEndpoint 'Microsoft.Cdn/profiles/endpoints@2023-05-01' = {
